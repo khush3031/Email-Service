@@ -1,5 +1,7 @@
 const { createLogger, format, transports } = require('winston')
 const { combine, timestamp, printf, align, colorize } = format
+const moment = require("moment-timezone")
+const morgan = require("morgan")
 
 const customFormat = printf(({ level, message, timestamp }) => `[${timestamp}] ${level.toLowerCase()} : ${message}`)
 
@@ -14,15 +16,22 @@ const logger = createLogger({
     transports: [
         new transports.Console(),  // Log to console
         new transports.File({
-            filename: 'logs/error.log',
+            filename: `logs/error/${moment().format("MMM-DD-YYYY")}.log`,
             level: 'error',  // Log only error level messages to this file
             format: combine(timestamp(), customFormat),
         }),
         new transports.File({
-            filename: 'logs/combined.log',  // Log all levels to combined.log
+            filename: `logs/info/${moment().format("MMM-DD-YYYY")}.log`,  // Log all levels to combined.log
+            level: "info",
             format: combine(timestamp(), customFormat),
         })
     ]
 })
 
-module.exports = logger
+module.exports.morganInstants = morgan("dev", {
+    stream:{
+        write: (str) => {
+            logger.info(str)
+        }
+    }
+})
