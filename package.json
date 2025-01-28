@@ -1,0 +1,27 @@
+{
+  "name": "email-service",
+  "version": "1.0.0",
+  "description": "email-service",
+  "main": "app.js",
+  "scripts": {
+    "test": "nodemon app.js",
+    "start": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khush3031/Email-Service.git"
+  },
+  "author": "khushboo makwana",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/khush3031/Email-Service/issues"
+  },
+  "homepage": "https://github.com/khush3031/Email-Service#readme",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "logger": "^0.0.1",
+    "nodemon": "^3.1.9",
+    "winston": "^3.17.0"
+  }
+}
