@@ -3,18 +3,17 @@ const { combine, timestamp, printf, align, colorize } = format
 const moment = require("moment-timezone")
 const morgan = require("morgan")
 
-const customFormat = printf(({ level, message, timestamp }) => `[${timestamp}] ${level.toLowerCase()} : ${message}`)
+const customFormat = printf(({ level, message, timestamp }) => `[${timestamp}] ${level.toLowerCase()} : ${message.trim()}`)
 
-const logger = createLogger({
+module.exports = createLogger({
     level: 'info',  // Default logging level (error, warn, info, http, verbose, debug, silly)
-    format: combine(
-        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),  // Timestamp format
-        align(),  // Aligns text properly
-        colorize(),  // Adds color to console output
-        customFormat  // Use the custom format defined above
-    ),
     transports: [
-        new transports.Console(),  // Log to console
+        new transports.Console({
+            format: combine( timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),  // Timestamp format
+            align(),  // Aligns text properly
+            colorize(),  // Adds color to console output
+            customFormat )
+        }),  // Log to console
         new transports.File({
             filename: `logs/error/${moment().format("MMM-DD-YYYY")}.log`,
             level: 'error',  // Log only error level messages to this file

@@ -18,10 +18,13 @@
   },
   "homepage": "https://github.com/khush3031/Email-Service#readme",
   "dependencies": {
+    "body-parser": "^1.20.3",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "logger": "^0.0.1",
     "moment-timezone": "^0.5.47",
+    "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
     "nodemon": "^3.1.9",
     "winston": "^3.17.0"
