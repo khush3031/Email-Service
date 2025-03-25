@@ -1,8 +1,9 @@
-const setting = require("./settingModels")
+const Setting = require("./settingModels")
 
 const isCodeExists = async ({ id, data }) => {
     try {
-        return setting.findOne({ ...(id ? { _id: { $ne: id } } : {}), code: data.code })
+        const getSettingQuery = { ...(id ? { _id: { $ne: id } } : {}), code: data.code }  
+        return await Setting.findOne(getSettingQuery)
     } catch (error) {
         logger.error("Error - isCodeExists ", error)
         throw new Error(error)
@@ -11,8 +12,9 @@ const isCodeExists = async ({ id, data }) => {
 
 const createSetting = async (data) => {
     try {
-        if(isCodeExists({ data })) return { flag: false, data: "" }
-        return { flag: true, data: await setting.create(data)}
+        const checkSettingAvailability = await isCodeExists({ data })
+        if(checkSettingAvailability) return { flag: false, data: checkSettingAvailability }
+        return { flag: true, data: await Setting.create(data) }
     } catch (error) {
         logger.error("Error -  createSetting ", error)
         throw new Error(error)
