@@ -3,6 +3,7 @@ const sgMail = require('@sendgrid/mail')
 const mailgun = require('mailgun-js');
 const { PROVIDER } = require('../config/constant/emailProvider');
 const SibApiV3Sdk = require('sib-api-v3-sdk')
+const Resend = require('resend')
 
 const sendEmail = async ({ to, toUsrNm, subject, text, html, provider = 'GMAIL' }) => {
     try {
@@ -21,6 +22,9 @@ const sendEmail = async ({ to, toUsrNm, subject, text, html, provider = 'GMAIL' 
             
             case PROVIDER.BREVO:
                 return await sendMailViaBrevo({ to, toUsrNm, subject, text, html })
+
+            case PROVIDER.RESEND: 
+                return await sendEmailViaResend({ to, subject, text, html })
 
             default:
                 throw new Error('Unsupported email provider');
@@ -126,5 +130,43 @@ const sendMailViaBrevo = async ({ to, toUsrNm, subject, text, html }) => {
         throw new Error(error)
     }
 }
+
+const sendEmailViaResend = async ({ to, subject, text, html }) => {
+    try {
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        resend.emails.send({
+            from: process.env.RESEND_SENDER_EMAIL,
+            to,
+            subject,
+            html
+        })
+    } catch (error) {
+        logger.error("Error - sendEmailViaResend ",error)
+        throw new Error(error)
+    }
+}
+
+const sendEmailViaElasticService = async({ to, subject, text, html }) => {
+    try {
+        const API_KEY = process.env.ELASTIC_EMAIL_API_KEY
+        const SENDER = process.env.EMAIL_USER; // Must be verified
+        const RECIPIENT = to;
+        const params = new URLSearchParams();
+        params.append('apikey', API_KEY);
+        params.append('from', SENDER);
+        params.append('to', RECIPIENT);
+        params.append('subject', subject);
+        params.append('bodyHtml', html);
+        params.append('bodyText', text);
+    
+        const response = await axios.post(
+          process.env.ELASTIC_SEND_EMAIL_URL,
+          params
+        );
+    } catch (error) {
+        logger.error("Error - sendEmailViaElasticService ", error)
+        throw new Error(error)
+    }
+} 
 
 module.exports = { sendEmail }
