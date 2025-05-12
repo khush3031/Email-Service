@@ -1,0 +1,34 @@
+{
+  "name": "email-service",
+  "version": "1.0.0",
+  "description": "email-service",
+  "main": "app.js",
+  "scripts": {
+    "test": "nodemon app.js",
+    "start": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khush3031/Email-Service.git"
+  },
+  "author": "khushboo makwana",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/khush3031/Email-Service/issues"
+  },
+  "homepage": "https://github.com/khush3031/Email-Service#readme",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "logger": "^0.0.1",
+    "mailgun-js": "^0.22.0",
+    "moment-timezone": "^0.5.47",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "nodemon": "^3.1.9",
+    "sib-api-v3-sdk": "^8.5.0",
+    "winston": "^3.17.0"
+  }
+}
