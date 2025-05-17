@@ -4,27 +4,43 @@ const mailgun = require('mailgun-js');
 const { PROVIDER } = require('../config/constant/emailProvider');
 const SibApiV3Sdk = require('sib-api-v3-sdk')
 const Resend = require('resend')
+const postmark = require('postmark')
+const axios = require("axios")
 
 const sendEmail = async ({ to, toUsrNm, subject, text, html, provider = 'GMAIL' }) => {
     try {
         switch (provider) {
             case PROVIDER.GMAIL:
-                return await sendViaGmail({ to, subject, text, html });
+                await sendViaGmail({ to, subject, text, html });
+            break
 
             case PROVIDER.SEND_GRID:
-                return await sendViaSendGrid({ to, subject, text, html });
+                await sendViaSendGrid({ to, subject, text, html });
+            break
 
             case PROVIDER.MAIL_GUN:
-                return await sendViaMailgun({ to, subject, text, html });
+                await sendViaMailgun({ to, subject, text, html });
+            break
 
             case PROVIDER.MAILER_SEND: 
-                return await sendEmailViaMailerService({ to, toUsrNm, subject, text, html })
+                await sendEmailViaMailerService({ to, toUsrNm, subject, text, html })
+            break
             
             case PROVIDER.BREVO:
-                return await sendMailViaBrevo({ to, toUsrNm, subject, text, html })
+                await sendMailViaBrevo({ to, toUsrNm, subject, text, html })
+            break
 
             case PROVIDER.RESEND: 
-                return await sendEmailViaResend({ to, subject, text, html })
+                await sendEmailViaResend({ to, subject, text, html })
+            break
+            
+            case PROVIDER.ELASTIC_SERVICE:
+                await sendEmailViaElasticService({ to, subject, text, html })
+            break
+
+            case PROVIDER.POSTMARK:
+                await sendEmailUsingPostMark({ to, subject, text, html })
+            break
 
             default:
                 throw new Error('Unsupported email provider');
@@ -102,7 +118,6 @@ const sendEmailViaMailerService = async ({ to, toUsrNm, subject, text, html }) =
             data
         }
         const mailSendRes = await axios(config)
-        console.log('Email sent:', mailSendRes.data);
         return mailSendRes.data
     } catch (error) {
         logger.error("Error - sendEmailViaMailerService ", error)
@@ -163,10 +178,31 @@ const sendEmailViaElasticService = async({ to, subject, text, html }) => {
           process.env.ELASTIC_SEND_EMAIL_URL,
           params
         );
+        return response.data
     } catch (error) {
         logger.error("Error - sendEmailViaElasticService ", error)
         throw new Error(error)
     }
-} 
+}
+
+const sendEmailUsingPostMark = async({ to, subject, text, html }) => {
+    try {
+        console.log('sendEmailUsingPostMark: ');
+        const client = new postmark.ServerClient(process.env.POSTMARK_API_TOKEN)
+        console.log('to: ', to);
+        console.log('process.env.POSTMARK_EMAIL: ', process.env.POSTMARK_EMAIL);
+        const resposne = await client.sendEmail({
+            From: process.env.POSTMARK_EMAIL,
+            To: to,
+            Subject: subject,
+            HtmlBody: html,
+            TextBody: text
+        })
+        console.log('resposne: ', resposne);
+    } catch (error) {
+        logger.error("Error - sendEmailUsingPostMark ", error)
+        throw new Error(error)
+    }
+}
 
 module.exports = { sendEmail }

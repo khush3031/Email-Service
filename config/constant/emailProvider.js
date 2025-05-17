@@ -4,7 +4,9 @@ const PROVIDER = {
     MAIL_GUN: "MAIL_GUN",
     MAILER_SEND: 'MAILER_SEND',
     BREVO: "BREVO",
-    RESEND: "RESEND"
+    RESEND: "RESEND",
+    ELASTIC_SERVICE: "ELASTIC_SERVICE",
+    POSTMARK: "POSTMARK"
 }
 
 module.exports = {
