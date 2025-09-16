@@ -2,25 +2,52 @@ const nodemailer = require('nodemailer')
 const sgMail = require('@sendgrid/mail')
 const mailgun = require('mailgun-js');
 const { PROVIDER } = require('../config/constant/emailProvider');
-const SibApiV3Sdk = require('sib-api-v3-sdk')
+const { Resend } = require('resend')
+const postmark = require('postmark')
+const axios = require("axios")
+const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend")
+
+const mailerSend = new MailerSend({
+    apiKey: process.env.MAILERSEND_TOKEN,
+})
+
+const resend = new Resend(process.env.RESEND_API_KEY)
+
 
 const sendEmail = async ({ to, toUsrNm, subject, text, html, provider = 'GMAIL' }) => {
     try {
         switch (provider) {
             case PROVIDER.GMAIL:
-                return await sendViaGmail({ to, subject, text, html });
+                await sendViaGmail({ to, subject, text, html });
+            break
 
             case PROVIDER.SEND_GRID:
-                return await sendViaSendGrid({ to, subject, text, html });
+                await sendViaSendGrid({ to, subject, text, html });
+            break
 
             case PROVIDER.MAIL_GUN:
-                return await sendViaMailgun({ to, subject, text, html });
+                await sendViaMailgun({ to, subject, text, html });
+            break
 
             case PROVIDER.MAILER_SEND: 
-                return await sendEmailViaMailerService({ to, toUsrNm, subject, text, html })
+                await sendEmailViaMailerService({ to, toUsrNm, subject, text, html })
+            break
             
             case PROVIDER.BREVO:
-                return await sendMailViaBrevo({ to, toUsrNm, subject, text, html })
+                await sendMailViaBrevo({ to, toUsrNm, subject, text, html })
+            break
+
+            case PROVIDER.RESEND: 
+                await sendEmailViaResend({ to, subject, text, html })
+            break
+            
+            case PROVIDER.ELASTIC_SERVICE:
+                await sendEmailViaElasticService({ to, subject, text, html })
+            break
+
+            case PROVIDER.POSTMARK:
+                await sendEmailUsingPostMark({ to, subject, text, html })
+            break
 
             default:
                 throw new Error('Unsupported email provider');
@@ -73,33 +100,29 @@ const sendViaMailgun = async ({ to, subject, text, html }) => {
 
 const sendEmailViaMailerService = async ({ to, toUsrNm, subject, text, html }) => {
     try {
-        const data = {
+        const response = await axios.post(process.env.MAILERSEND_BASE_URL, {
             from: {
-                email: process.env.MAILER_SENDER_EMAIL, // Must be a verified domain
-                name: process.env.MAIL_SENDER_NAME,
-              },
-              to: [
-                {
-                  email: to,
-                  name: toUsrNm ?? "",
-                },
-              ],
-              subject,
-              text,
-              html
-        }
-        const config =  {
-            method: 'POST',
-            url: process.env.MAILERSEND_BASE_URL,
-            headers: {
-                Authorization: `Bearer ${process.env.MAILERSEND_TOKEN}`,
-                'Content-Type': 'application/json',
+                email: process.env.MAILER_SENDER_EMAIL,
+                name: process.env.MAIL_SENDER_NAME
             },
-            data
-        }
-        const mailSendRes = await axios(config)
-        console.log('Email sent:', mailSendRes.data);
-        return mailSendRes.data
+            to: [
+                {
+                    email: to,
+                    name: toUsrNm ?? ""
+                }
+            ],
+            subject,
+            text,
+            html
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.MAILERSEND_TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        logger.info('Email sent successfully:', response.data);
+        return response.data;
     } catch (error) {
         logger.error("Error - sendEmailViaMailerService ", error)
         throw new Error(error)
@@ -108,21 +131,106 @@ const sendEmailViaMailerService = async ({ to, toUsrNm, subject, text, html }) =
 
 const sendMailViaBrevo = async ({ to, toUsrNm, subject, text, html }) => {
     try {
-        const client = SibApiV3Sdk.ApiClient.instance
-        const apiKey = client.authentications['api-key']
-        apiKey.apiKey = process.env.BREVO_API_KEY
-
-        const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi()
-        const sendSmtpEmail = {
-            to: [{ email: to, name: toUsrNm }],
-            sender: { email: process.env.EMAIL_USER, name: 'Khushboo makwana' },
+        let data = JSON.stringify({
+            "sender": {
+                "name": process.env.MAIL_SENDER_NAME,
+                "email": process.env.EMAIL_USER
+            },
+            "to": [
+                {
+                    "email": to,
+                    "name": toUsrNm
+                }
+            ],
             subject,
-            htmlContent,
-            textContent: text,
+            "htmlContent": html
+        });
+
+        let config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: process.env.BREVO_BASE_URL,
+            headers: {
+                'accept': 'application/json',
+                'api-key': process.env.BREVO_API_KEY,
+                'content-type': 'application/json'
+            },
+            data: data
+        };
+
+        
+        try {
+            console.log("config : ", config);
+            const response = await axios.request(config)
+            console.log(JSON.stringify(response.data));
+            return response.data
+        } catch (error) {
+            console.error('Error sending email:', error.response?.body || error.message);
+            throw error;
         }
-        return await apiInstance.sendTransactionalEmail(sendSmtpEmail)
     } catch (error) {
         logger.error("Error - sendMailViaBrevo ", error)
+        throw new Error(error)
+    }
+}
+
+const sendEmailViaResend = async ({ to, subject, text, html }) => {
+    try {
+        console.log("sendEmailViaResend", process.env.RESEND_API_KEY);
+        console.log("resend");
+        const data = await resend.emails.send({
+            from: process.env.RESEND_SENDER_EMAIL,
+            to: [to],
+            subject,
+            html
+        })
+        return data
+    } catch (error) {
+        logger.error("Error - sendEmailViaResend ",error)
+        throw new Error(error)
+    }
+}
+
+const sendEmailViaElasticService = async({ to, subject, text, html }) => {
+    try {
+        const API_KEY = process.env.ELASTIC_EMAIL_API_KEY
+        const SENDER = process.env.ELASTIC_EMAIL; // Must be verified
+        const RECIPIENT = to;
+        const params = new URLSearchParams();
+        params.append('apikey', API_KEY);
+        params.append('from', SENDER);
+        params.append('to', RECIPIENT);
+        params.append('subject', subject);
+        params.append('bodyHtml', html);
+        params.append('bodyText', text);
+    
+        const response = await axios.post(
+          process.env.ELASTIC_SEND_EMAIL_URL,
+          params
+        );
+        return response.data
+    } catch (error) {
+        logger.error("Error - sendEmailViaElasticService ", error)
+        throw new Error(error)
+    }
+}
+
+const sendEmailUsingPostMark = async({ to, subject, text, html }) => {
+    try {
+        console.log('sendEmailUsingPostMark: ');
+        const client = new postmark.ServerClient(process.env.POSTMARK_API_TOKEN)
+        console.log('to: ', to);
+        console.log('process.env.POSTMARK_EMAIL: ', process.env.POSTMARK_EMAIL);
+        const resposne = await client.sendEmail({
+            From: process.env.POSTMARK_EMAIL,
+            To: to,
+            Subject: subject,
+            HtmlBody: html,
+            TextBody: text
+        })
+        console.log('resposne: ', resposne);
+    } catch (error) {
+        logger.error("Error - sendEmailUsingPostMark ", error)
         throw new Error(error)
     }
 }

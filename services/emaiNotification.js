@@ -10,8 +10,9 @@ router.post("/send-email/:provider", async(req, res) => {
     }
     const html = replaceVariables(emailTemplate.html, replaceVal)
     const subject = replaceVariables(emailTemplate.subject, replaceVal)
-    await sendEmail({ to: req.body.email, subject, text: emailTemplate.text, html, provider: req.query.provider })
-    res.send(200).json({ message: "Email send successfully." })
+    console.log('req.query.provider: ', req.params.provider);
+    await sendEmail({ to: req.body.email, subject, text: emailTemplate.text, html, provider: req.params.provider })
+    res.sendStatus(200).json({ message: "Email send successfully." })
 })
 
 module.exports = router
